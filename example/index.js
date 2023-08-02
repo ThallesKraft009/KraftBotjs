@@ -22,7 +22,11 @@ bot.event("MESSAGE_CREATE", function(msg){
   msg.reply({
     content: "bom dia",
     embeds: [{
-      description: "Testando!"
+      description: "Testando!",
+       title: "Opa!",
+      footer: {
+        text: "hm"
+      }
     }]
   })
 })
