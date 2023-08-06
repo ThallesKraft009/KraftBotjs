@@ -1,4 +1,6 @@
 const WebSocket = require('websocket').w3cwebsocket;
+const fs = require("fs");
+const colors = require("colors")
 
 module.exports = class Bot {
   constructor({ token, intents }) {
@@ -28,7 +30,7 @@ module.exports = class Bot {
 
     this.ws.onopen = () => {
       this.identify();
-      console.log("Conectaso ao Discord.")
+      console.log(colors.yellow("WebSocket aberto."))
     };
 
     this.ws.onmessage = (event) => {
@@ -41,6 +43,7 @@ module.exports = class Bot {
       } else if (data.op === 11) {
         console.log('Heartbeat ACK received.');
       }
+      
     };
 
     this.ws.onerror = (error) => {
@@ -93,25 +96,42 @@ module.exports = class Bot {
   }, 5000)
   }
 
-  event(name, func) {
-    this.ws.onmessage = (event) => {
+  async PrefixLoad({prefix: prefix, local: local}){
+
+    const commands = [];
+
+    fs.readdirSync(`./${local}/`).forEach(dir => {
+        const files = fs.readdirSync(`./${local}/${dir}/`).filter(file => file.endsWith('.js'));
+
+        files.forEach((file) => {
+            let command = require(`../${local}/${dir}/${file}`)
+
+            if(command) {
+           commands[command.name] = command;
+            } 
+        })
+    })
+    
+      this.ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
       if (data.op === 0) {
       const { t, d } = data;
-      console.log(t)
       if (t === 'MESSAGE_CREATE') {
+        
+        if(d.channel.type !== 0) return;
+          
+	if(!d.content.startsWith(prefix)) return; 
+	const args = d.content.slice(prefix.length).trim().split(/ +/g); 
+	const cmd = args.shift().toLowerCase();
+	if(cmd.length == 0 ) return;
+	let command = commands[cmd]
 
-        if (name === "MESSAGE_CREATE"){
-        let event = require('./event/MESSAGE_CREATE.js');
-
-        let dados = new event(this.token, d);
-
-        func(dados);
-      }
-    }
-  }
-    };
+  command.run(d, args);
+        
+      } else if(t === "READY") {
+        console.log(colors.green("Client Conectado."))
+      }}}
   }
 };
     
